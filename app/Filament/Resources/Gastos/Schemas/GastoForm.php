@@ -24,17 +24,7 @@ class GastoForm
                     ->required()
                     ->numeric()
                     ->prefix('R$')
-                    ->inputMode('decimal')
-                    ->dehydrateStateUsing(function ($state) {
-                        if ($state === null) {
-                            return 0;
-                        }
-
-                        // Remove tudo que não for número ou separador
-                        $state = str_replace(['.', ','], ['', '.'], $state);
-
-                        return (float) $state;
-                    }),
+                    ->inputMode('decimal'),
 
 
                 DatePicker::make('data')
