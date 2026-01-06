@@ -19,15 +19,18 @@ class Gasto extends Model
     protected $fillable = [
         'descricao',
         'valor',
-        'data',
+        'data', // Dt. Vencimento
+        'data_pagamento',
         'categoria_id',
         'tipo_despesa_id',
         'recorrencia_id',
+        
     ];
 
     protected $casts = [
         'valor' => 'decimal:2',
         'data' => 'date',
+        'data_pagamento' => 'date',
     ];
 
 

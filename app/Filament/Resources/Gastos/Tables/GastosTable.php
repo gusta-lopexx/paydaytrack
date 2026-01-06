@@ -11,6 +11,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Carbon\Carbon;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Forms\Components\Select;
 use Filament\Tables\Columns\Summarizers\Sum;
@@ -35,13 +36,15 @@ class GastosTable
                     ),
 
                 TextColumn::make('data')
-                    ->label('Data')
+                    ->label('Dt. Vencimento')
                     ->date('d/m/Y')
                     ->sortable(),
+                
                 TextColumn::make('categoria.nome')
                     ->label('Categoria')
                     ->searchable()
                     ->sortable(),
+                
                 TextColumn::make('tipoDespesa.nome')
                     ->label('Tipo')
                     ->badge()
@@ -52,13 +55,17 @@ class GastosTable
                     ])
                     ->sortable(),
                 
-                
-                
+                TextColumn::make('data_pagamento')
+                    ->label('Dt. Pagamento')
+                    ->date('d/m/Y')
+                    ->placeholder('Em aberto')
+                    ->sortable(),
                 
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+                
                 TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
@@ -151,6 +158,17 @@ class GastosTable
             ->recordActions([
                 EditAction::make(),
                 DeleteAction::make(),
+                Action::make('pagar')
+                    ->label('Pagar')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->visible(fn ($record) => $record->data_pagamento === null)
+                    ->action(function ($record) {
+                        $record->update([
+                            'data_pagamento' => now()->toDateString(),
+                        ]);
+                    }),
+
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
