@@ -29,6 +29,19 @@ class GastoResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'descricao';
 
+    public static function getNavigationBadge(): ?string
+    {
+        $count = Gasto::atrasadas()->count();
+
+        return $count > 0 ? (string) $count : null;
+    }
+    
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'danger';
+    }
+
+
     public static function form(Schema $schema): Schema
     {
         return GastoForm::configure($schema);

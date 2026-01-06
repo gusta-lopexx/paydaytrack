@@ -82,6 +82,12 @@ class GastoForm
                     })
                     ->dehydrated(),
 
+                DatePicker::make('data_pagamento')
+                    ->label('Dt. Pagamento')
+                    ->displayFormat('d/m/Y')
+                    ->native(false)
+                    ->helperText('Informe a data em que a despesa foi paga')
+                    ->visible(fn ($record) => $record !== null),
 
                 
                 

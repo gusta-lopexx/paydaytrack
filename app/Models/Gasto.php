@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 
 class Gasto extends Model
 {
@@ -15,6 +16,14 @@ class Gasto extends Model
     {
         return $this->belongsTo(TipoDespesa::class);
     }
+
+    public function scopeAtrasadas(Builder $query): Builder
+    {
+        return $query
+            ->whereNull('data_pagamento')
+            ->whereDate('data', '<', now()->toDateString());
+    }
+
 
     protected $fillable = [
         'descricao',

@@ -16,11 +16,12 @@ class EditGasto extends EditRecord
      */
     protected function handleRecordUpdate($record, array $data): Gasto
     {
-        // Atualiza sempre o registro atual
+        // Atualiza o registro atual (incluindo data_pagamento, se vier)
         $record->update([
             'descricao' => $data['descricao'],
             'valor' => $data['valor'],
-            'data' => $data['data'],
+            'data' => $data['data'], // Dt. Vencimento
+            'data_pagamento' => $data['data_pagamento'] ?? $record->data_pagamento,
             'categoria_id' => $data['categoria_id'],
             'tipo_despesa_id' => $data['tipo_despesa_id'],
         ]);
@@ -32,18 +33,20 @@ class EditGasto extends EditRecord
         ) {
             Gasto::query()
                 ->where('recorrencia_id', $record->recorrencia_id)
-                ->where('data', '>=', $record->data)
+                ->where('data', '>', $record->data)
                 ->where('id', '!=', $record->id)
                 ->update([
                     'descricao' => $data['descricao'],
                     'valor' => $data['valor'],
                     'categoria_id' => $data['categoria_id'],
                     'tipo_despesa_id' => $data['tipo_despesa_id'],
+                    // NÃO replica data_pagamento
                 ]);
         }
 
         return $record;
     }
+
 
     /**
      * Ações do topo (Excluir)

@@ -38,7 +38,18 @@ class GastosTable
                 TextColumn::make('data')
                     ->label('Dt. Vencimento')
                     ->date('d/m/Y')
-                    ->sortable(),
+                    ->sortable()
+                    ->color(fn ($record) =>
+                        $record->data_pagamento === null && $record->data->isPast()
+                            ? 'danger'
+                            : null
+                    )
+                    ->icon(fn ($record) =>
+                        $record->data_pagamento === null && $record->data->isPast()
+                            ? 'heroicon-o-exclamation-triangle'
+                            : null
+                    ),
+
                 
                 TextColumn::make('categoria.nome')
                     ->label('Categoria')
@@ -72,6 +83,10 @@ class GastosTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                Tables\Filters\Filter::make('atrasadas')
+                    ->label('Atrasadas')
+                    ->query(fn ($query) => $query->atrasadas()),
+
                 Tables\Filters\Filter::make('periodo')
                     ->label('Período')
                     ->form([
@@ -158,14 +173,23 @@ class GastosTable
             ->recordActions([
                 EditAction::make(),
                 DeleteAction::make(),
+                
                 Action::make('pagar')
                     ->label('Pagar')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->visible(fn ($record) => $record->data_pagamento === null)
-                    ->action(function ($record) {
+                    ->form([
+                        DatePicker::make('data_pagamento')
+                            ->label('Data de pagamento')
+                            ->default(now())
+                            ->displayFormat('d/m/Y')
+                            ->native(false)
+                            ->required(),
+                    ])
+                    ->action(function ($record, array $data) {
                         $record->update([
-                            'data_pagamento' => now()->toDateString(),
+                            'data_pagamento' => $data['data_pagamento'],
                         ]);
                     }),
 
