@@ -3,8 +3,9 @@
 namespace App\Filament\Resources\Gastos\Pages;
 
 use App\Filament\Resources\Gastos\GastoResource;
-use Filament\Actions\CreateAction;
+use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Tables\Table;
 
 class ListGastos extends ListRecords
 {
@@ -13,7 +14,17 @@ class ListGastos extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make(),
+            Actions\CreateAction::make()
+                ->label('Criar despesa'),
         ];
+    }
+
+    public function table(Table $table): Table
+    {
+        return parent::table($table)
+            ->persistFiltersInSession()
+            ->persistSearchInSession()
+            ->persistSortInSession()
+            ->persistColumnSearchesInSession();
     }
 }

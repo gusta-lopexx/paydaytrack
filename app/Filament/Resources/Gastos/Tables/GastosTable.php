@@ -3,19 +3,18 @@
 namespace App\Filament\Resources\Gastos\Tables;
 
 use Filament\Tables;
-Use Filament\Actions\BulkActionGroup;
+use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Forms\Components\Select;
 use Filament\Tables\Columns\Summarizers\Sum;
-use SebastianBergmann\CodeCoverage\Filter;
+use Filament\Forms\Components\Toggle;
 
 class GastosTable
 {
@@ -25,6 +24,7 @@ class GastosTable
             ->columns([
                 TextColumn::make('descricao')
                     ->searchable(),
+
                 TextColumn::make('valor')
                     ->label('Valor')
                     ->money('BRL', locale: 'pt_BR')
@@ -50,12 +50,11 @@ class GastosTable
                             : null
                     ),
 
-                
                 TextColumn::make('categoria.nome')
                     ->label('Categoria')
                     ->searchable()
                     ->sortable(),
-                
+
                 TextColumn::make('tipoDespesa.nome')
                     ->label('Tipo')
                     ->badge()
@@ -65,115 +64,90 @@ class GastosTable
                         'gray' => 'Eventual',
                     ])
                     ->sortable(),
-                
+
                 TextColumn::make('data_pagamento')
                     ->label('Dt. Pagamento')
                     ->date('d/m/Y')
                     ->placeholder('Em aberto')
                     ->sortable(),
-                
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
             ])
+
             ->filters([
+                // 🔴 Atrasadas (vencidas e não pagas)
                 Tables\Filters\Filter::make('atrasadas')
                     ->label('Atrasadas')
-                    ->query(fn ($query) => $query->atrasadas()),
+                    ->query(fn (Builder $query) =>
+                        $query
+                            ->whereNull('data_pagamento')
+                            ->whereDate('data', '<', now())
+                    ),
 
-                Tables\Filters\Filter::make('periodo')
-                    ->label('Período')
+                // 🟡 Em aberto (não pagas, independente da data)
+                Tables\Filters\Filter::make('em_aberto')
+                    ->label('Em aberto')
+                    ->query(fn (Builder $query) =>
+                        $query->whereNull('data_pagamento')
+                    ),
+
+                // 📅 Filtro por mês / ano
+                Tables\Filters\Filter::make('mes_atual')
+                    ->label('Filtro')
                     ->form([
-                        DatePicker::make('data_inicio')
-                            ->label('Data inicial')
-                            ->displayFormat('d/m/Y')
-                            ->native(false),
+                        Select::make('mes')
+                            ->label('Mês')
+                            ->options([
+                                '01' => 'Janeiro',
+                                '02' => 'Fevereiro',
+                                '03' => 'Março',
+                                '04' => 'Abril',
+                                '05' => 'Maio',
+                                '06' => 'Junho',
+                                '07' => 'Julho',
+                                '08' => 'Agosto',
+                                '09' => 'Setembro',
+                                '10' => 'Outubro',
+                                '11' => 'Novembro',
+                                '12' => 'Dezembro',
+                            ])
+                            ->default(now()->format('m'))
+                            ->visible(fn (callable $get) => ! $get('mostrar_todos')),
 
-                        DatePicker::make('data_fim')
-                            ->label('Data final')
-                            ->displayFormat('d/m/Y')
-                            ->native(false),
+                        Select::make('ano')
+                            ->label('Ano')
+                            ->options(
+                                collect(range(now()->year - 2, now()->year + 1))
+                                    ->mapWithKeys(fn ($year) => [$year => $year])
+                            )
+                            ->default(now()->year)
+                            ->visible(fn (callable $get) => ! $get('mostrar_todos')),
+
+                        Toggle::make('mostrar_todos')
+                            ->label('Mostrar todas as despesas')
+                            ->default(false),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
+                        if (($data['mostrar_todos'] ?? false) === true) {
+                            return $query;
+                        }
+
                         return $query
                             ->when(
-                                $data['data_inicio'] ?? null,
-                                fn (Builder $query, $date) =>
-                                    $query->whereDate('data', '>=', $date)
+                                $data['mes'] ?? null,
+                                fn (Builder $query, $mes) =>
+                                    $query->whereMonth('data', $mes)
                             )
                             ->when(
-                                $data['data_fim'] ?? null,
-                                fn (Builder $query, $date) =>
-                                    $query->whereDate('data', '<=', $date)
+                                $data['ano'] ?? null,
+                                fn (Builder $query, $ano) =>
+                                    $query->whereYear('data', $ano)
                             );
                     }),
-
-                    Tables\Filters\Filter::make('mes_atual')
-                        ->label('Filtro')
-                        ->form([
-                            Select::make('mes')
-                                ->label('Mês')
-                                ->options([
-                                    '01' => 'Janeiro',
-                                    '02' => 'Fevereiro',
-                                    '03' => 'Março',
-                                    '04' => 'Abril',
-                                    '05' => 'Maio',
-                                    '06' => 'Junho',
-                                    '07' => 'Julho',
-                                    '08' => 'Agosto',
-                                    '09' => 'Setembro',
-                                    '10' => 'Outubro',
-                                    '11' => 'Novembro',
-                                    '12' => 'Dezembro',
-                                ])
-                                ->default(now()->format('m'))
-                                ->visible(fn (callable $get) => !$get('mostrar_todos')),
-
-                            Select::make('ano')
-                                ->label('Ano')
-                                ->options(
-                                    collect(range(now()->year - 2, now()->year + 1))
-                                        ->mapWithKeys(fn ($year) => [$year => $year])
-                                )
-                                ->default(now()->year)
-                                ->visible(fn (callable $get) => !$get('mostrar_todos')),
-
-                            \Filament\Forms\Components\Toggle::make('mostrar_todos')
-                                ->label('Mostrar todas as despesas')
-                                ->default(false),
-                        ])
-                        ->query(function (Builder $query, array $data): Builder {
-                            // Se marcar "mostrar todos", não aplica filtro
-                            if (($data['mostrar_todos'] ?? false) === true) {
-                                return $query;
-                            }
-
-                            return $query
-                                ->when(
-                                    $data['mes'] ?? null,
-                                    fn (Builder $query, $mes) =>
-                                        $query->whereMonth('data', $mes)
-                                )
-                                ->when(
-                                    $data['ano'] ?? null,
-                                    fn (Builder $query, $ano) =>
-                                        $query->whereYear('data', $ano)
-                                );
-                    }),
-
             ])
 
             ->recordActions([
                 EditAction::make(),
                 DeleteAction::make(),
-                
+
                 Action::make('pagar')
                     ->label('Pagar')
                     ->icon('heroicon-o-check-circle')
@@ -187,13 +161,13 @@ class GastosTable
                             ->native(false)
                             ->required(),
                     ])
-                    ->action(function ($record, array $data) {
+                    ->action(fn ($record, array $data) =>
                         $record->update([
                             'data_pagamento' => $data['data_pagamento'],
-                        ]);
-                    }),
-
+                        ])
+                    ),
             ])
+
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
